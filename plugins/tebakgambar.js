@@ -1,33 +1,35 @@
-const fetch = require('node-fetch')
+let fetch = require('node-fetch')
+
 let timeout = 120000
 let poin = 500
 let handler = async (m, { conn, usedPrefix }) => {
-  conn.tebakgambar = conn.tebakgambar ? conn.tebakgambar : {}
-  let id = m.chat
-  if (id in conn.tebakgambar) {
-    conn.reply(m.chat, 'Masih ada soal belum terjawab di chat ini', conn.tebakgambar[id][0])
-    throw false
-  }
-  let src = await (await fetch('https://raw.githubusercontent.com/BochilTeam/database/master/games/tebakgambar.json')).json()
-  let json = src[Math.floor(Math.random() * src.length)]
-  let caption = `
-  ${json.deskripsi}
+    conn.tebakkata = conn.tebakkata ? conn.tebakkata : {}
+    let id = m.chat
+    if (id in conn.tebakkata) {
+        conn.reply(m.chat, 'Masih ada soal belum terjawab di chat ini', conn.tebakkata[id][0])
+        throw false
+    }
+    let res = await fetch(global.API('xteam', '/game/tebakkata', {}, 'APIKEY'))
+    if (res.status !== 200) throw await res.text()
+    let json = await res.json()
+    if (!json.status) throw json
+    let caption = `
+${json.result.soal}
 Timeout *${(timeout / 1000).toFixed(2)} detik*
-Ketik ${usedPrefix}hint untuk bantuan
+Ketik ${usedPrefix}teka untuk bantuan
 Bonus: ${poin} XP
-    `.trim()
-  conn.tebakgambar[id] = [
-    await conn.sendButtonLoc(m.chat, await (await fetch(json.img)).buffer(), caption, '', 'HINT', '.hint', m)
-    ,
-    json, poin,
-    setTimeout(async () => {
-      if (conn.tebakgambar[id]) await conn.sendButton(m.chat, `Waktu habis!\nJawabannya adalah *${json.jawaban}*`, '', 'Tebak Gambar', '.tebakgambar', conn.tebakgambar[id][0])
-      delete conn.tebakgambar[id]
-    }, timeout)
-  ]
+`.trim()
+    conn.tebakkata[id] = [
+        await conn.reply(m.chat, caption, m),
+        json, poin,
+        setTimeout(() => {
+            if (conn.tebakkata[id]) conn.reply(m.chat, `Waktu habis!\nJawabannya adalah *${json.result.jawaban}*`, conn.tebakkata[id][0])
+            delete conn.tebakkata[id]
+        }, timeout)
+    ]
 }
-handler.help = ['tebakgambar']
+handler.help = ['tebakkata']
 handler.tags = ['game']
-handler.command = /^tebakgambar/i
+handler.command = /^tebakkata/i
 
 module.exports = handler
